@@ -116,6 +116,14 @@ async def on_transfer_admin_input(m: types.Message, state: FSMContext, db):
     if was_user:
         await users_repo.upsert(target_user_id, role="admin")
     
+    # Уведомляем трекер событий
+    try:
+        from app.utils.role_change_tracker import get_role_change_tracker
+        tracker = get_role_change_tracker()
+        await tracker.on_admin_transferred(m.from_user.id, target_user_id, mailbox_id)
+    except Exception as e:
+        logging.warning(f"Failed to notify role tracker: {e}")
+    
     # Уведомляем нового владельца ящика
     try:
         from app.keyboards.write_flow import start_kb_admin

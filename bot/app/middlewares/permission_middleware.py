@@ -55,8 +55,10 @@ class PermissionMiddleware(BaseMiddleware):
         if not user_id:
             return await handler(event, data)
         
-        # Получаем роль пользователя
-        user_role_str = await self.users_repo.get_role(user_id)
+        # Получаем роль пользователя с кэшированием
+        from app.utils.role_cache import get_role_cache
+        role_cache = get_role_cache()
+        user_role_str = await role_cache.get_role(user_id, self.users_repo.get_role)
         try:
             user_role = Role(user_role_str)
         except ValueError:

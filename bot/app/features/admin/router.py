@@ -157,6 +157,41 @@ async def cmd_state_info(m: types.Message, state: FSMContext):
     
     await m.answer(info_text, parse_mode="HTML")
 
+# Команда для просмотра статистики кэша ролей
+@router.message(Command("cache_stats"))
+async def cmd_cache_stats(m: types.Message):
+    """Показать статистику event-driven кэша ролей"""
+    from app.utils.event_driven_role_cache import get_event_driven_role_cache
+    
+    role_cache = get_event_driven_role_cache()
+    stats = role_cache.get_stats()
+    
+    info_text = f"🚀 <b>Статистика Event-Driven кэша ролей</b>\n\n"
+    info_text += f"📊 <b>Размер кэша:</b> {stats['cache_size']} пользователей\n"
+    info_text += f"✅ <b>Попадания:</b> {stats['hits']}\n"
+    info_text += f"❌ <b>Промахи:</b> {stats['misses']}\n"
+    info_text += f"📈 <b>Процент попаданий:</b> {stats['hit_rate_percent']}%\n"
+    info_text += f"🔄 <b>Обновления:</b> {stats['updates']}\n"
+    info_text += f"🗑️ <b>Инвалидации:</b> {stats['invalidations']}\n"
+    info_text += f"📝 <b>События обработано:</b> {stats['events_processed']}\n"
+    info_text += f"🎯 <b>Обработчики событий:</b> {stats['event_handlers']}\n"
+    info_text += f"⚡ <b>TTL:</b> Отключен (обновления по событиям)\n\n"
+    
+    if stats['hit_rate_percent'] > 80:
+        info_text += "🟢 <b>Отличная производительность!</b>"
+    elif stats['hit_rate_percent'] > 60:
+        info_text += "🟡 <b>Хорошая производительность</b>"
+    else:
+        info_text += "🔴 <b>Низкая производительность кэша</b>"
+    
+    info_text += f"\n\n💡 <b>Преимущества Event-Driven кэша:</b>\n"
+    info_text += f"• Нет фоновых задач очистки\n"
+    info_text += f"• Обновления только при реальных изменениях\n"
+    info_text += f"• Минимальная нагрузка на систему\n"
+    info_text += f"• 100% актуальность данных"
+    
+    await m.answer(info_text, parse_mode="HTML")
+
 # Antispam callbacks
 router.callback_query.register(cb_antispam_mailbox_selection, F.data.startswith("antispam_mailbox:"))
 

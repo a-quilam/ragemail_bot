@@ -81,6 +81,14 @@ async def on_add_admin_input(m: types.Message, state: FSMContext, db):
         # Назначаем роль админа
         try:
             await UsersRepo(db).upsert(target_user_id, role="admin", username=username)
+            
+            # Уведомляем трекер событий
+            try:
+                from app.utils.role_change_tracker import get_role_change_tracker
+                tracker = get_role_change_tracker()
+                await tracker.on_admin_added(target_user_id, username)
+            except Exception as e:
+                logging.warning(f"Failed to notify role tracker: {e}")
             logging.info(f"ADD ADMIN SUCCESS: User {target_user_id} added as admin by {m.from_user.id}")
         except Exception as e:
             logging.error(f"ADD ADMIN ERROR: Failed to add user {target_user_id} as admin: {e}")

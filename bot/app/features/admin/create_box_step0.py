@@ -22,6 +22,8 @@ async def cb_create_box(m: types.Message, state: FSMContext, db):
         
     except Exception as e:
         logging.error(f"Error in cb_create_box: {e}")
+        # Очищаем состояние при ошибке, чтобы пользователь не застрял в FSM
+        await state.clear()
         await m.answer(f"❌ Ошибка при запуске создания ящика: {str(e)}")
 
 async def cb_select_channel(callback: types.CallbackQuery, state: FSMContext, db):

@@ -181,4 +181,6 @@ async def on_channel_input(m: types.Message, state: FSMContext, db):
         
     except Exception as e:
         logging.error(f"Error processing channel input: {e}")
+        # Очищаем состояние при ошибке, чтобы пользователь не застрял в ADD_CHANNEL
+        await state.clear()
         await m.answer(f"❌ Ошибка при обработке канала: {str(e)}")

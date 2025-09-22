@@ -17,7 +17,7 @@ router = Router()
 
 # Кастомный фильтр для on_auto_text_input
 async def auto_text_filter(message, state: FSMContext):
-    """Фильтр для on_auto_text_input - исключает кнопки и состояние INPUT_TEXT"""
+    """Фильтр для on_auto_text_input - исключает кнопки, состояние INPUT_TEXT и пересланные сообщения"""
     # Проверяем, что это не кнопка
     if message.text and any(message.text.startswith(prefix) for prefix in ["✍️", "⚙️", "📊", "📌", "🔄", "🛡️"]):
         return False
@@ -25,6 +25,10 @@ async def auto_text_filter(message, state: FSMContext):
     # Проверяем, что пользователь НЕ в состоянии INPUT_TEXT
     current_state = await state.get_state()
     if current_state == WriteStates.INPUT_TEXT:
+        return False
+    
+    # ИСКЛЮЧАЕМ пересланные сообщения - они должны обрабатываться другими роутерами
+    if message.forward_from_chat or message.forward_from:
         return False
     
     return True

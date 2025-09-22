@@ -182,11 +182,15 @@ class TestDeeplinkFlow(unittest.IsolatedAsyncioTestCase):
                         # Проверяем, что сообщение было отправлено
                         self.message.answer.assert_called()
                     else:
-                        # Для невалидных случаев не должно быть вызовов
+                        # Для невалидных случаев должно быть сообщение об ошибке
                         await cmd_start_payload(self.message, self.db, self.bot)
                         
-                        # Проверяем, что сообщение НЕ было отправлено
-                        self.message.answer.assert_not_called()
+                        # Проверяем, что было отправлено сообщение об ошибке
+                        if text == "/start abc":
+                            self.message.answer.assert_called_with("❌ Неверный формат ссылки.")
+                        elif text == "/start":
+                            # Для команды без параметров не должно быть ответа
+                            self.message.answer.assert_not_called()
 
 
 if __name__ == '__main__':

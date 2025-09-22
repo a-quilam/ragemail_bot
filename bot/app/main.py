@@ -66,6 +66,15 @@ async def main() -> None:
     # Создаем простое соединение с базой данных
     db = await connect(settings.DB_PATH)
     
+    # Инициализируем event-driven кэш ролей (без TTL)
+    from app.utils.event_driven_role_cache import init_event_driven_role_cache
+    from app.utils.role_change_tracker import init_role_change_tracker
+    
+    role_cache = init_event_driven_role_cache()
+    role_tracker = init_role_change_tracker()
+    
+    logging.info("Event-driven role cache initialized (no TTL, updates on events only)")
+    
     dp = Dispatcher()
     users_repo = UsersRepo(db)
     
@@ -90,8 +99,8 @@ async def main() -> None:
     # Отладочный middleware удален - проблема решена
     
     dp.include_router(admin_router)   # Админские функции - ПЕРВЫЙ!
-    dp.include_router(start_router)  # /start команда
-    dp.include_router(bind_router)   # Обработка start payload
+    dp.include_router(bind_router)   # Обработка start payload - ДОЛЖЕН БЫТЬ ПЕРЕД start_router!
+    dp.include_router(start_router)  # /start команда без параметров
     dp.include_router(write_router)   # Написание писем - ДОЛЖЕН БЫТЬ ПЕРЕД relay_router!
     dp.include_router(relay_router)  # /end команда и релеи
     dp.include_router(channel_router) # Callback кнопки каналов

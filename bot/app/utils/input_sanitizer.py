@@ -11,7 +11,7 @@ class InputSanitizer:
     """Utility class for sanitizing user input"""
     
     # Regex patterns for validation
-    USERNAME_PATTERN = re.compile(r'^@?[a-zA-Z0-9_]{5,32}$')
+    USERNAME_PATTERN = re.compile(r'^[a-zA-Z0-9_]{5,32}$')
     USER_ID_PATTERN = re.compile(r'^\d{1,10}$')
     TEXT_PATTERN = re.compile(r'^[a-zA-Zа-яА-Я0-9\s@_.,!?\-()]+$')
     
@@ -26,16 +26,20 @@ class InputSanitizer:
         Sanitize and validate username
         
         Args:
-            username: Raw username input
+            username: Raw username input (with or without @ prefix)
             
         Returns:
-            Sanitized username or None if invalid
+            Sanitized username without @ prefix or None if invalid
         """
         if not username or not isinstance(username, str):
             return None
         
         # Remove leading/trailing whitespace
         username = username.strip()
+        
+        # Remove @ prefix if present (for consistency)
+        if username.startswith('@'):
+            username = username[1:]
         
         # Remove HTML entities
         username = html.unescape(username)
@@ -48,8 +52,8 @@ class InputSanitizer:
             logging.warning(f"Username too long: {len(username)} characters")
             return None
         
-        # Validate format
-        if not InputSanitizer.USERNAME_PATTERN.match(username):
+        # Validate format (without @ prefix)
+        if not re.match(r'^[a-zA-Z0-9_]{5,32}$', username):
             logging.warning(f"Invalid username format: {username}")
             return None
         

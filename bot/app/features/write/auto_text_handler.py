@@ -18,7 +18,14 @@ async def on_auto_text_input(m: types.Message, state: FSMContext, db, active_mai
     
     if is_admin:
         # Админы используют обычный флоу с кнопками
-        logging.info(f"AUTO TEXT HANDLER: User {m.from_user.id} is admin, skipping auto text processing")
+        current_state = await state.get_state()
+        
+        # Если админ застрял в FSM состоянии (не в WriteStates), очищаем его
+        if current_state and not str(current_state).startswith("WriteStates"):
+            logging.info(f"AUTO TEXT HANDLER: Clearing stuck FSM state for admin {m.from_user.id}: {current_state}")
+            await state.clear()
+            await m.answer("🔄 Состояние сброшено. Вы можете продолжить работу.")
+        
         return False
     
     # Проверяем, что у пользователя есть активный ящик
@@ -40,6 +47,11 @@ async def on_auto_text_input(m: types.Message, state: FSMContext, db, active_mai
     button_texts = ["✍️ Написать письмо", "⚙️ Настройки", "📊 Статистика", "📌 Закрепить пост", "🔄 Обновить", "🛡️ Антиспам", "👤 Добавить админа", "🗑️ Удалить админа", "➕ Создать почтовый ящик", "📦 Управление ящиками", "🔙 Назад"]
     if m.text in button_texts:
         logging.info(f"AUTO TEXT HANDLER: Skipping button text: {m.text}")
+        return False
+    
+    # ИСКЛЮЧАЕМ пересланные сообщения - они должны обрабатываться другими роутерами
+    if m.forward_from_chat or m.forward_from:
+        logging.info(f"AUTO TEXT HANDLER: Skipping forwarded message from user {m.from_user.id}")
         return False
     
     # Обрабатываем как письмо - просто переводим в состояние INPUT_TEXT

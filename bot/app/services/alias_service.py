@@ -114,6 +114,14 @@ class AliasService:
                 adjective = random.choice(cache['adjectives'] or ADJECTIVES)
                 noun = random.choice(cache['nouns'] or NOUNS_2SYL)
                 alias = f"{emoji} {adjective} {noun}"
+                
+                # Применяем упрощенную морфологическую обработку
+                try:
+                    from app.utils.morphology import process_alias_morphology_simple
+                    alias = process_alias_morphology_simple(alias)
+                except Exception as e:
+                    logger.warning(f"Failed to process alias morphology: {e}")
+                    # Продолжаем с исходным псевдонимом
             else:
                 # Формат: эмодзи + существительное + цифры
                 noun = random.choice(cache['nouns'] or NOUNS_2SYL)
@@ -158,6 +166,14 @@ class AliasService:
                     adjective = random.choice(cache['adjectives'] or ADJECTIVES)
                     noun = random.choice(cache['nouns'] or NOUNS_2SYL)
                     alias = f"{emoji} {adjective} {noun}"
+                    
+                    # Применяем упрощенную морфологическую обработку
+                    try:
+                        from app.utils.morphology import process_alias_morphology_simple
+                        alias = process_alias_morphology_simple(alias)
+                    except Exception as e:
+                        logger.warning(f"Failed to process backup alias morphology: {e}")
+                        # Продолжаем с исходным псевдонимом
                 else:
                     # Формат: эмодзи + существительное + цифры
                     noun = random.choice(cache['nouns'] or NOUNS_2SYL)

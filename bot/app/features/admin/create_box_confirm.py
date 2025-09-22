@@ -43,6 +43,8 @@ async def cb_box_confirm(cb: types.CallbackQuery, state: FSMContext, db):
         
     except Exception as e:
         logging.error(f"Error creating mailbox: {e}")
+        # Очищаем состояние при ошибке, чтобы пользователь не застрял в CONFIRM
+        await state.clear()
         await cb.answer(f"❌ Ошибка создания ящика: {str(e)}", show_alert=True)
 
 async def cb_box_back(cb: types.CallbackQuery, state: FSMContext, db):

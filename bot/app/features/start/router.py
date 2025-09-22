@@ -13,7 +13,9 @@ router = Router()
 
 async def is_admin_db(message, db) -> bool:
     try:
-        role = await UsersRepo(db).get_role(message.from_user.id)
+        from app.utils.role_cache import get_role_cache
+        role_cache = get_role_cache()
+        role = await role_cache.get_role(message.from_user.id, UsersRepo(db).get_role)
     except Exception:
         role = "user"
     return role in ("admin", "superadmin") or (settings.SUPERADMIN_ID and message.from_user.id == settings.SUPERADMIN_ID)
@@ -22,6 +24,13 @@ async def is_admin_db(message, db) -> bool:
 async def cmd_start(m: types.Message, state: FSMContext, db) -> None:
     try:
         logging.info(f"START COMMAND RECEIVED from user {m.from_user.id}")
+        
+        # Проверяем, есть ли параметры в команде /start
+        if m.text and len(m.text.split()) > 1:
+            # Если есть параметры, это deeplink - пропускаем обработку
+            # bind_router должен обработать это
+            logging.info(f"START COMMAND with payload detected, skipping: '{m.text}'")
+            return
         
         await state.clear()
         

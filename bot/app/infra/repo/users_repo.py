@@ -80,6 +80,15 @@ class UsersRepo(BaseRepo):
                         "INSERT INTO users(user_id, role, username) VALUES(?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET role=excluded.role, username=excluded.username",
                         (user_id, role, username)
                     )
+                    
+                    # Обновляем event-driven кэш ролей
+                    try:
+                        from app.utils.event_driven_role_cache import get_event_driven_role_cache
+                        role_cache = get_event_driven_role_cache()
+                        await role_cache.update_role(user_id, role)
+                    except Exception as e:
+                        logging.warning(f"Failed to update role cache for user {user_id}: {e}")
+                    
                     return  # Успешное выполнение
                 except Exception as e:
                     if attempt < max_retries - 1:
@@ -125,6 +134,14 @@ class UsersRepo(BaseRepo):
                 try:
                     # Выполняем обновление
                     await self.execute_update("UPDATE users SET role=? WHERE user_id=?", (role, user_id))
+                    
+                    # Обновляем event-driven кэш ролей
+                    try:
+                        from app.utils.event_driven_role_cache import get_event_driven_role_cache
+                        role_cache = get_event_driven_role_cache()
+                        await role_cache.update_role(user_id, role)
+                    except Exception as e:
+                        logging.warning(f"Failed to update role cache for user {user_id}: {e}")
                     
                     # Создаем резервную копию после критических изменений роли
                     try:
