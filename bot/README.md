@@ -186,3 +186,4 @@ app/fsm/
 
 app/main.py                # Порядок роутеров
 ```
+## Git Setup Complete! 🎉
