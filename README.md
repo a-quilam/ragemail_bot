@@ -2,9 +2,14 @@
 
 > Профессиональный Telegram-бот для анонимной переписки с продвинутой архитектурой
 
+> ⚠️ **ВНИМАНИЕ: Это бета-версия (v0.0.1-beta). Функциональность может быть нестабильной.**
+
 [![Python](https://img.shields.io/badge/Python-3.13+-blue.svg)](https://python.org)
 [![aiogram](https://img.shields.io/badge/aiogram-3.x-green.svg)](https://docs.aiogram.dev)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/Version-0.0.1--beta-orange.svg)](CHANGELOG.md)
+[![Beta](https://img.shields.io/badge/Status-Beta-red.svg)](CHANGELOG.md)
+[![GitHub release](https://img.shields.io/github/release/a-quilam/ragemail_bot.svg)](https://github.com/a-quilam/ragemail_bot/releases)
 
 ## 🚀 Быстрый старт
 
