@@ -44,6 +44,15 @@ class AliasService:
         self._pool_size = 50  # Размер пула псевдонимов
         self._generating_backup = False  # Флаг генерации резервного пула
 
+    def clear_cache(self):
+        """Принудительно очистить все кэши для применения обновлений"""
+        self._alias_pool = []
+        self._backup_pool = []
+        self._available_words_cache = None
+        self._cache_expires = 0
+        self._generating_backup = False
+        logger.info("AliasService cache cleared - new aliases will be generated with updated morphology")
+
     def _today_key(self) -> str:
         """
         Получить ключ текущего дня в формате YYYY-MM-DD.
@@ -116,9 +125,14 @@ class AliasService:
                 alias = f"{emoji} {adjective} {noun}"
                 
                 # Применяем упрощенную морфологическую обработку
+                original_alias = alias
                 try:
                     from app.utils.morphology import process_alias_morphology_simple
                     alias = process_alias_morphology_simple(alias)
+                    if alias != original_alias:
+                        logger.info(f"Morphology applied: '{original_alias}' -> '{alias}'")
+                    else:
+                        logger.debug(f"Morphology unchanged: '{alias}'")
                 except Exception as e:
                     logger.warning(f"Failed to process alias morphology: {e}")
                     # Продолжаем с исходным псевдонимом
@@ -168,9 +182,14 @@ class AliasService:
                     alias = f"{emoji} {adjective} {noun}"
                     
                     # Применяем упрощенную морфологическую обработку
+                    original_alias = alias
                     try:
                         from app.utils.morphology import process_alias_morphology_simple
                         alias = process_alias_morphology_simple(alias)
+                        if alias != original_alias:
+                            logger.info(f"Backup morphology applied: '{original_alias}' -> '{alias}'")
+                        else:
+                            logger.debug(f"Backup morphology unchanged: '{alias}'")
                     except Exception as e:
                         logger.warning(f"Failed to process backup alias morphology: {e}")
                         # Продолжаем с исходным псевдонимом

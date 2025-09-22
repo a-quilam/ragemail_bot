@@ -71,6 +71,8 @@ ADJECTIVE_DECLENSION = {
     "ый": "ая",
     "ий": "яя", 
     "ой": "ая",
+    "евый": "евая",  # для сложных прилагательных
+    "овый": "овая",  # для сложных прилагательных
 }
 
 def decline_adjective_simple(adjective: str, gender: str = "femn") -> str:
@@ -108,7 +110,15 @@ def get_noun_gender_simple(noun: str) -> str:
         return "femn"
     
     # Специальные случаи для мужских существительных (исключения)
-    masculine_nouns = ["медведь", "конь", "день", "пень", "олень", "лось", "конь"]
+    masculine_nouns = [
+        "медведь", "конь", "день", "пень", "олень", "лось", "конь",
+        "тигр", "лев", "волк", "пес", "кот", "барс", "рысь", "ягуар",
+        "леопард", "гепард", "пантера", "каракал", "сервал", "оцелот",
+        "маргай", "кодкод", "снежный", "барс", "пума", "ягуар",
+        "носорог", "бегемот", "верблюд", "слон", "жираф", "зебра",
+        "антилопа", "газель", "импала", "гну", "лань", "косуля",
+        "олень", "лось", "кабан", "бык", "баран", "козел", "теленок"
+    ]
     if noun in masculine_nouns:
         return "masc"
     
@@ -155,7 +165,13 @@ def process_alias_morphology_simple(alias: str) -> str:
     if len(parts) > 3:
         result_parts.extend(parts[3:])
     
-    return " ".join(result_parts)
+    result = " ".join(result_parts)
+    
+    # Логируем только если что-то изменилось
+    if result != alias:
+        logger.debug(f"Morphology: '{alias}' -> '{result}' (gender: {gender})")
+    
+    return result
 
 # Функция для тестирования
 def test_morphology():

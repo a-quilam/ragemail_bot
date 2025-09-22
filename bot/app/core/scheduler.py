@@ -36,8 +36,8 @@ class Scheduler:
         while True:
             try:
                 await self._tick()
-            except Exception:
-                pass
+            except Exception as e:
+                logging.error(f"Error in scheduler tick: {e}")
             await asyncio.sleep(5)
 
     async def _tick(self):
@@ -75,36 +75,73 @@ class Scheduler:
 
     async def _process_delayed_queue(self):
         now = int(time.time())
-        async with self.mailboxes.db.execute("SELECT id,user_id,mailbox_id,text,ttl_seconds,alias FROM delayed_queue WHERE run_at<=?", (now,)) as cur:
-            rows = await cur.fetchall()
-        
-        if not rows:
-            return
+        try:
+            async with self.mailboxes.db.execute("SELECT id,user_id,mailbox_id,text,ttl_seconds,alias FROM delayed_queue WHERE run_at<=?", (now,)) as cur:
+                rows = await cur.fetchall()
             
-        # Оптимизация: получаем все нужные ящики одним запросом
-        mailbox_ids = list(set(row[2] for row in rows))
-        mailboxes = await self.mailboxes.batch_get(mailbox_ids)
-        
-        # Обрабатываем элементы очереди
-        processed_ids = []
-        for _id, user_id, mailbox_id, text, ttl, alias in rows:
-            if mailbox_id not in mailboxes:
-                processed_ids.append(_id)
-                continue
+            if not rows:
+                return
                 
-            _, _, channel_id, _, _ = mailboxes[mailbox_id]
-            svc = PostService(self.bot, self.tz, self.posts, self.exts)
-            try:
-                await svc.publish(channel_id, user_id, alias, text, ttl, mailbox_id)
-                processed_ids.append(_id)
-            except Exception:
-                pass
-        
-        # Удаляем обработанные элементы batch'ем
-        if processed_ids:
-            placeholders = ','.join('?' * len(processed_ids))
-            await self.mailboxes.db.execute(f"DELETE FROM delayed_queue WHERE id IN ({placeholders})", processed_ids)
+            # Оптимизация: получаем все нужные ящики одним запросом
+            mailbox_ids = list(set(row[2] for row in rows))
+            mailboxes = await self.mailboxes.batch_get(mailbox_ids)
+            
+            # Обрабатываем элементы очереди
+            processed_ids = []
+            failed_ids = []
+            
+            for _id, user_id, mailbox_id, text, ttl, alias in rows:
+                try:
+                    if mailbox_id not in mailboxes:
+                        processed_ids.append(_id)  # Удаляем из очереди
+                        continue
+                        
+                    _, _, channel_id, _, _ = mailboxes[mailbox_id]
+                    svc = PostService(self.bot, self.tz, self.posts, self.exts)
+                    
+                    await svc.publish(channel_id, user_id, alias, text, ttl, mailbox_id)
+                    processed_ids.append(_id)
+                    
+                    # Уведомляем пользователя об успешной отправке
+                    try:
+                        await self.bot.send_message(
+                            user_id, 
+                            f"✅ Отложенное сообщение отправлено!"
+                        )
+                    except Exception:
+                        pass  # Игнорируем ошибки уведомлений
+                    
+                except Exception as e:
+                    logging.error(f"Failed to send delayed message {_id}: {e}")
+                    failed_ids.append(_id)
+                    
+                    # Уведомляем пользователя об ошибке
+                    try:
+                        await self.bot.send_message(
+                            user_id, 
+                            f"❌ Не удалось отправить отложенное сообщение"
+                        )
+                    except Exception:
+                        pass  # Игнорируем ошибки уведомлений
+            
+            # Удаляем успешно обработанные элементы
+            if processed_ids:
+                placeholders = ','.join('?' * len(processed_ids))
+                await self.mailboxes.db.execute(f"DELETE FROM delayed_queue WHERE id IN ({placeholders})", processed_ids)
+            
+            # Для неудачных сообщений увеличиваем run_at на 5 минут для retry
+            if failed_ids:
+                retry_time = now + 300  # 5 минут
+                placeholders = ','.join('?' * len(failed_ids))
+                await self.mailboxes.db.execute(
+                    f"UPDATE delayed_queue SET run_at = ? WHERE id IN ({placeholders})", 
+                    [retry_time] + failed_ids
+                )
+            
             await self.mailboxes.db.commit()
+            
+        except Exception as e:
+            logging.error(f"Error in delayed queue processing: {e}")
 
     async def _maybe_weekly_stats(self):
         boxes = await self.mailboxes.list_all()

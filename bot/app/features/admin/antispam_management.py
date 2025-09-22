@@ -35,6 +35,45 @@ async def get_user_owned_mailboxes(db, user_id: int) -> list:
     
     return owned_mailboxes
 
+async def get_antispam_mailbox_id(state: FSMContext, db, user_id: int, active_mailbox_id: int = None) -> int:
+    """
+    Получить ID ящика для антиспама с fallback логикой
+    Сначала проверяет состояние FSM, затем активный ящик, затем первый доступный ящик
+    """
+    # 1. Проверяем состояние FSM
+    data = await state.get_data()
+    mailbox_id = data.get("antispam_mailbox_id")
+    if mailbox_id and await can_manage_mailbox(db, user_id, mailbox_id):
+        return mailbox_id
+    
+    # 2. Проверяем активный ящик
+    if active_mailbox_id and await can_manage_mailbox(db, user_id, active_mailbox_id):
+        return active_mailbox_id
+    
+    # 3. Берем первый доступный ящик
+    owned_mailboxes = await get_user_owned_mailboxes(db, user_id)
+    if owned_mailboxes:
+        return owned_mailboxes[0][0]
+    
+    return None
+
+async def check_antispam_access(m: types.Message, state: FSMContext, db, active_mailbox_id: int = None) -> tuple[bool, int]:
+    """
+    Проверить доступ к антиспаму и получить ID ящика
+    Возвращает (has_access, mailbox_id)
+    """
+    if not await is_admin_db(m, db):
+        await m.answer("❌ Доступ запрещен.")
+        return False, None
+    
+    mailbox_id = await get_antispam_mailbox_id(state, db, m.from_user.id, active_mailbox_id)
+    
+    if not mailbox_id:
+        await m.answer("❌ У вас нет доступных ящиков для управления антиспамом.")
+        return False, None
+    
+    return True, mailbox_id
+
 async def cmd_antispam(m: types.Message, state: FSMContext, db, active_mailbox_id: int = None):
     """Показать меню управления антиспамом"""
     import logging
@@ -147,8 +186,7 @@ async def show_antispam_menu(m: types.Message, state: FSMContext, db, mailbox_id
     
     await m.answer(text, parse_mode="HTML")
     
-    # Очищаем состояние после показа меню
-    await state.clear()
+    # НЕ очищаем состояние - оно нужно для работы команд антиспама
 
 async def cb_antispam_mailbox_selection(c: types.CallbackQuery, state: FSMContext, db):
     """Обработчик выбора ящика для антиспама"""
@@ -170,23 +208,10 @@ async def cb_antispam_mailbox_selection(c: types.CallbackQuery, state: FSMContex
     await show_antispam_menu(c.message, state, db, mailbox_id)
     await c.answer()
 
-async def cmd_block_word(m: types.Message, state: FSMContext, db):
+async def cmd_block_word(m: types.Message, state: FSMContext, db, active_mailbox_id: int = None):
     """Заблокировать слово"""
-    if not await is_admin_db(m, db):
-        await m.answer("❌ Доступ запрещен.")
-        return
-    
-    # Получаем выбранный ящик из состояния
-    data = await state.get_data()
-    mailbox_id = data.get("antispam_mailbox_id")
-    
-    if not mailbox_id:
-        await m.answer("❌ Сначала выберите ящик для антиспама через кнопку 🛡️ Антиспам.")
-        return
-    
-    # Проверяем права доступа к ящику
-    if not await can_manage_mailbox(db, m.from_user.id, mailbox_id):
-        await m.answer("❌ Доступ запрещен к этому ящику.")
+    has_access, mailbox_id = await check_antispam_access(m, state, db, active_mailbox_id)
+    if not has_access:
         return
     
     # Парсим команду: /block слово [причина] [время_в_часах]
@@ -229,23 +254,10 @@ async def cmd_block_word(m: types.Message, state: FSMContext, db):
     else:
         await m.answer("❌ Ошибка при блокировке слова.")
 
-async def cmd_unblock_word(m: types.Message, state: FSMContext, db):
+async def cmd_unblock_word(m: types.Message, state: FSMContext, db, active_mailbox_id: int = None):
     """Разблокировать слово"""
-    if not await is_admin_db(m, db):
-        await m.answer("❌ Доступ запрещен.")
-        return
-    
-    # Получаем выбранный ящик из состояния
-    data = await state.get_data()
-    mailbox_id = data.get("antispam_mailbox_id")
-    
-    if not mailbox_id:
-        await m.answer("❌ Сначала выберите ящик для антиспама через кнопку 🛡️ Антиспам.")
-        return
-    
-    # Проверяем права доступа к ящику
-    if not await can_manage_mailbox(db, m.from_user.id, mailbox_id):
-        await m.answer("❌ Доступ запрещен к этому ящику.")
+    has_access, mailbox_id = await check_antispam_access(m, state, db, active_mailbox_id)
+    if not has_access:
         return
     
     parts = m.text.split(maxsplit=1)
@@ -271,23 +283,10 @@ async def cmd_unblock_word(m: types.Message, state: FSMContext, db):
     else:
         await m.answer("❌ Слово не было заблокировано или ошибка при разблокировке.")
 
-async def cmd_show_blocks(m: types.Message, state: FSMContext, db):
+async def cmd_show_blocks(m: types.Message, state: FSMContext, db, active_mailbox_id: int = None):
     """Показать все блокировки"""
-    if not await is_admin_db(m, db):
-        await m.answer("❌ Доступ запрещен.")
-        return
-    
-    # Получаем выбранный ящик из состояния
-    data = await state.get_data()
-    mailbox_id = data.get("antispam_mailbox_id")
-    
-    if not mailbox_id:
-        await m.answer("❌ Сначала выберите ящик для антиспама через кнопку 🛡️ Антиспам.")
-        return
-    
-    # Проверяем права доступа к ящику
-    if not await can_manage_mailbox(db, m.from_user.id, mailbox_id):
-        await m.answer("❌ Доступ запрещен к этому ящику.")
+    has_access, mailbox_id = await check_antispam_access(m, state, db, active_mailbox_id)
+    if not has_access:
         return
     
     blocks_repo = AliasBlocksRepo(db)
@@ -310,23 +309,10 @@ async def cmd_show_blocks(m: types.Message, state: FSMContext, db):
     
     await m.answer(text, parse_mode="HTML")
 
-async def cmd_cooldown_user(m: types.Message, state: FSMContext, db):
+async def cmd_cooldown_user(m: types.Message, state: FSMContext, db, active_mailbox_id: int = None):
     """Установить кулдаун для пользователя по псевдониму"""
-    if not await is_admin_db(m, db):
-        await m.answer("❌ Доступ запрещен.")
-        return
-    
-    # Получаем выбранный ящик из состояния
-    data = await state.get_data()
-    mailbox_id = data.get("antispam_mailbox_id")
-    
-    if not mailbox_id:
-        await m.answer("❌ Сначала выберите ящик для антиспама через кнопку 🛡️ Антиспам.")
-        return
-    
-    # Проверяем права доступа к ящику
-    if not await can_manage_mailbox(db, m.from_user.id, mailbox_id):
-        await m.answer("❌ Доступ запрещен к этому ящику.")
+    has_access, mailbox_id = await check_antispam_access(m, state, db, active_mailbox_id)
+    if not has_access:
         return
     
     # Парсим команду: /cooldown псевдоним [время_в_часах] [причина]
@@ -372,23 +358,10 @@ async def cmd_cooldown_user(m: types.Message, state: FSMContext, db):
     else:
         await m.answer("❌ Ошибка при установке кулдауна.")
 
-async def cmd_remove_cooldown(m: types.Message, state: FSMContext, db):
+async def cmd_remove_cooldown(m: types.Message, state: FSMContext, db, active_mailbox_id: int = None):
     """Снять кулдаун с пользователя"""
-    if not await is_admin_db(m, db):
-        await m.answer("❌ Доступ запрещен.")
-        return
-    
-    # Получаем выбранный ящик из состояния
-    data = await state.get_data()
-    mailbox_id = data.get("antispam_mailbox_id")
-    
-    if not mailbox_id:
-        await m.answer("❌ Сначала выберите ящик для антиспама через кнопку 🛡️ Антиспам.")
-        return
-    
-    # Проверяем права доступа к ящику
-    if not await can_manage_mailbox(db, m.from_user.id, mailbox_id):
-        await m.answer("❌ Доступ запрещен к этому ящику.")
+    has_access, mailbox_id = await check_antispam_access(m, state, db, active_mailbox_id)
+    if not has_access:
         return
     
     parts = m.text.split(maxsplit=1)
@@ -416,27 +389,11 @@ async def cmd_remove_cooldown(m: types.Message, state: FSMContext, db):
         await m.answer(f"✅ Кулдаун снят с пользователя {user_id}.")
     else:
         await m.answer("❌ Кулдаун не был установлен или ошибка при снятии.")
-    
-    # Очищаем состояние после завершения операции
-    await state.clear()
 
-async def cmd_show_cooldowns(m: types.Message, state: FSMContext, db):
+async def cmd_show_cooldowns(m: types.Message, state: FSMContext, db, active_mailbox_id: int = None):
     """Показать все активные кулдауны"""
-    if not await is_admin_db(m, db):
-        await m.answer("❌ Доступ запрещен.")
-        return
-    
-    # Получаем выбранный ящик из состояния
-    data = await state.get_data()
-    mailbox_id = data.get("antispam_mailbox_id")
-    
-    if not mailbox_id:
-        await m.answer("❌ Сначала выберите ящик для антиспама через кнопку 🛡️ Антиспам.")
-        return
-    
-    # Проверяем права доступа к ящику
-    if not await can_manage_mailbox(db, m.from_user.id, mailbox_id):
-        await m.answer("❌ Доступ запрещен к этому ящику.")
+    has_access, mailbox_id = await check_antispam_access(m, state, db, active_mailbox_id)
+    if not has_access:
         return
     
     cooldowns_repo = UserCooldownsRepo(db)
@@ -444,7 +401,6 @@ async def cmd_show_cooldowns(m: types.Message, state: FSMContext, db):
     
     if not cooldowns:
         await m.answer("✅ <b>Активных кулдаунов нет</b>")
-        await state.clear()
         return
     
     text = f"⏰ <b>Активные кулдауны ({len(cooldowns)})</b>\n\n"
@@ -465,6 +421,3 @@ async def cmd_show_cooldowns(m: types.Message, state: FSMContext, db):
         text += f"... и еще {len(cooldowns) - 10} кулдаунов\n"
     
     await m.answer(text, parse_mode="HTML")
-    
-    # Очищаем состояние после завершения операции
-    await state.clear()

@@ -1,7 +1,7 @@
 from aiogram import Router, F, types
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
-from app.fsm.admin_states import CreateBoxStates, AddAdminStates, RemoveAdminStates, TransferAdminStates, ButtonConfigStates, AntispamStates
+from app.fsm.admin_states import CreateBoxStates, AddAdminStates, RemoveAdminStates, TransferAdminStates, ButtonConfigStates
 from .menu_open import on_settings_button
 from .create_box_step0 import cb_create_box, cb_select_channel, cb_cancel_box, cb_refresh_channel_list
 # from .create_box_step1 import on_box_channel  # Удален, используется simple_channel_add
@@ -28,6 +28,7 @@ from .button_config import (
     cb_reset_buttons, cb_confirm_reset_buttons, on_button_config_text
 )
 from .cmd_network_status import router as network_status_router, set_network_monitor
+from .cmd_clear_alias_cache import cmd_clear_alias_cache
 
 router = Router()
 
@@ -94,8 +95,8 @@ router.message.register(cmd_refresh, Command("refresh"))
 router.message.register(cmd_backup, Command("backup"))
 router.message.register(cmd_restore, Command("restore"))
 router.message.register(cmd_antispam, Command("antispam"))
-router.message.register(cmd_block_word, Command("block"), StateFilter(AntispamStates.MAILBOX_SELECTED))
-router.message.register(cmd_unblock_word, Command("unblock"), StateFilter(AntispamStates.MAILBOX_SELECTED))
+router.message.register(cmd_block_word, Command("block"))
+router.message.register(cmd_unblock_word, Command("unblock"))
 router.message.register(cmd_show_blocks, Command("blocks"))
 router.message.register(cmd_cooldown_user, Command("cooldown"))
 router.message.register(cmd_remove_cooldown, Command("remove_cooldown"))
@@ -191,6 +192,12 @@ async def cmd_cache_stats(m: types.Message):
     info_text += f"• 100% актуальность данных"
     
     await m.answer(info_text, parse_mode="HTML")
+
+# Команда для очистки кэша псевдонимов
+@router.message(Command("clear_alias_cache"))
+async def cmd_clear_alias_cache_handler(m: types.Message, role: str = "user"):
+    """Очистить кэш псевдонимов для применения морфологических исправлений"""
+    await cmd_clear_alias_cache(m, role)
 
 # Antispam callbacks
 router.callback_query.register(cb_antispam_mailbox_selection, F.data.startswith("antispam_mailbox:"))

@@ -209,6 +209,10 @@ class UsersRepo(BaseRepo):
             logging.error(f"Error getting all admins: {e}")
             return []
 
+    async def get_admins(self) -> List[Tuple[int, str]]:
+        """Получить всех администраторов (алиас для get_all_admins для совместимости)"""
+        return await self.get_all_admins()
+
     async def get_users_with_active_mailboxes(self) -> List[int]:
         """Получить всех пользователей с активными ящиками"""
         try:

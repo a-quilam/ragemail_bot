@@ -23,7 +23,7 @@ async def cb_send_delay(c: types.CallbackQuery, state: FSMContext, db, tz: ZoneI
     )
     await db.commit()
     item_id = cur.lastrowid
-    await c.message.edit_text("Хорошо, отправлю через 2 минуты")
+    await c.message.edit_text("✅ Хорошо, отправлю через 2 минуты")
     await c.message.answer("Вы можете отменить отложенную отправку:", reply_markup=delayed_cancel_kb(item_id))
     await c.answer()
 
