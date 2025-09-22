@@ -30,14 +30,16 @@ class FSMCleanupMiddleware(BaseMiddleware):
             # Логируем ошибку
             logger.error(f"Error in handler: {e}", exc_info=True)
             
-            # Пытаемся очистить FSM состояние
+            # Пытаемся очистить FSM состояние, но НЕ очищаем AntispamStates
             try:
                 state: FSMContext = data.get("state")
                 if state:
                     current_state = await state.get_state()
-                    if current_state:
+                    if current_state and not str(current_state).startswith("AntispamStates"):
                         logger.info(f"Clearing FSM state {current_state} due to error")
                         await state.clear()
+                    elif current_state and str(current_state).startswith("AntispamStates"):
+                        logger.info(f"Preserving AntispamStates {current_state} despite error")
             except Exception as cleanup_error:
                 logger.error(f"Failed to clear FSM state: {cleanup_error}")
             

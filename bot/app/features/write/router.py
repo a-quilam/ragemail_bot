@@ -17,14 +17,14 @@ router = Router()
 
 # Кастомный фильтр для on_auto_text_input
 async def auto_text_filter(message, state: FSMContext):
-    """Фильтр для on_auto_text_input - исключает кнопки, состояние INPUT_TEXT и пересланные сообщения"""
+    """Фильтр для on_auto_text_input - исключает кнопки, FSM состояния WriteStates и пересланные сообщения"""
     # Проверяем, что это не кнопка
     if message.text and any(message.text.startswith(prefix) for prefix in ["✍️", "⚙️", "📊", "📌", "🔄", "🛡️"]):
         return False
     
-    # Проверяем, что пользователь НЕ в состоянии INPUT_TEXT
+    # Проверяем, что пользователь НЕ в любом из FSM состояний WriteStates
     current_state = await state.get_state()
-    if current_state == WriteStates.INPUT_TEXT:
+    if current_state and "WriteStates" in str(current_state):
         return False
     
     # ИСКЛЮЧАЕМ пересланные сообщения - они должны обрабатываться другими роутерами
@@ -37,7 +37,7 @@ router.message.register(on_write_button, F.text == "✍️ Написать пи
 router.message.register(on_text_input, StateFilter(WriteStates.INPUT_TEXT))
 # Автоматическая обработка текста для обычных пользователей (должен быть последним)
 # НЕ обрабатываем кнопки - они должны обрабатываться специфичными обработчиками
-# НЕ обрабатываем сообщения в состоянии INPUT_TEXT - они обрабатываются on_text_input
+# НЕ обрабатываем сообщения в FSM состояниях WriteStates - они обрабатываются соответствующими обработчиками
 router.message.register(on_auto_text_input, auto_text_filter)
 
 router.callback_query.register(on_ttl_add, F.data.startswith("ttl_add:"), StateFilter(WriteStates.CHOOSE_TTL))

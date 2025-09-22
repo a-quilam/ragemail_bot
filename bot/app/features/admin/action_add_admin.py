@@ -43,23 +43,24 @@ async def on_add_admin_input(m: types.Message, state: FSMContext, db):
         elif m.text and m.text.strip().startswith('@'):
             username = m.text.strip()[1:]  # убираем @
             
-            # Сначала пробуем найти в базе данных
-            users_repo = UsersRepo(db)
-            target_user_id = await users_repo.get_by_username(username)
-            
-            if not target_user_id:
-                # Если не найден в базе, пробуем через get_chat
-                try:
-                    chat = await m.bot.get_chat(f"@{username}")
-                    if chat and hasattr(chat, 'id') and chat.id:
-                        target_user_id = chat.id
-                        # Сохраняем username в базе для будущих поисков
-                        await users_repo.update_username(target_user_id, username)
-                    else:
-                        await m.answer("Не удалось получить ID пользователя по @username. Пришлите числовой ID или пересланное сообщение.")
-                        await safe_clear_state(state, m.from_user.id)
-                        return
-                except TelegramAPIError:
+            # Сначала пробуем через get_chat (работает для всех пользователей Telegram)
+            try:
+                chat = await m.bot.get_chat(f"@{username}")
+                if chat and hasattr(chat, 'id') and chat.id:
+                    target_user_id = chat.id
+                    # Сохраняем username в базе для будущих поисков
+                    users_repo = UsersRepo(db)
+                    await users_repo.update_username(target_user_id, username)
+                else:
+                    await m.answer("Не удалось получить ID пользователя по @username. Пришлите числовой ID или пересланное сообщение.")
+                    await safe_clear_state(state, m.from_user.id)
+                    return
+            except TelegramAPIError:
+                # Если не удалось через get_chat, пробуем найти в базе данных
+                users_repo = UsersRepo(db)
+                target_user_id = await users_repo.get_by_username(username)
+                
+                if not target_user_id:
                     await m.answer(
                         f"❌ <b>Не удалось найти пользователя</b>\n\n"
                         f"@username не найден или пользователь не существует.\n"

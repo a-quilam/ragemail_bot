@@ -76,7 +76,7 @@ class Scheduler:
     async def _process_delayed_queue(self):
         now = int(time.time())
         try:
-            async with self.mailboxes.db.execute("SELECT id,user_id,mailbox_id,text,ttl_seconds,alias FROM delayed_queue WHERE run_at<=?", (now,)) as cur:
+            async with self.mailboxes.db.execute("SELECT id,user_id,mailbox_id,text,ttl_seconds,alias,cancel_message_id FROM delayed_queue WHERE run_at<=?", (now,)) as cur:
                 rows = await cur.fetchall()
             
             if not rows:
@@ -90,13 +90,13 @@ class Scheduler:
             processed_ids = []
             failed_ids = []
             
-            for _id, user_id, mailbox_id, text, ttl, alias in rows:
+            for _id, user_id, mailbox_id, text, ttl, alias, cancel_message_id in rows:
                 try:
                     if mailbox_id not in mailboxes:
                         processed_ids.append(_id)  # Удаляем из очереди
                         continue
                         
-                    _, _, channel_id, _, _ = mailboxes[mailbox_id]
+                    _, _, channel_id, _, _, _ = mailboxes[mailbox_id]
                     svc = PostService(self.bot, self.tz, self.posts, self.exts)
                     
                     await svc.publish(channel_id, user_id, alias, text, ttl, mailbox_id)
@@ -104,10 +104,23 @@ class Scheduler:
                     
                     # Уведомляем пользователя об успешной отправке
                     try:
+                        # Формируем ссылку на канал
+                        channel_link = f"https://t.me/{channel_id.replace('@', '')}" if str(channel_id).startswith('@') else f"https://t.me/c/{str(channel_id)[4:]}" if str(channel_id).startswith('-100') else f"https://t.me/{channel_id}"
+                        
                         await self.bot.send_message(
                             user_id, 
-                            f"✅ Отложенное сообщение отправлено!"
+                            f"✅ <b>Отложенное сообщение отправлено!</b>\n\n"
+                            f"📺 <b>Канал:</b> <a href='{channel_link}'>Перейти к посту</a>",
+                            parse_mode="HTML",
+                            disable_web_page_preview=True
                         )
+                        
+                        # Удаляем сообщение с кнопкой отмены, если оно существует
+                        if cancel_message_id:
+                            try:
+                                await self.bot.delete_message(user_id, cancel_message_id)
+                            except Exception:
+                                pass  # Игнорируем ошибки удаления сообщения
                     except Exception:
                         pass  # Игнорируем ошибки уведомлений
                     
@@ -151,7 +164,7 @@ class Scheduler:
         
         # Оптимизация: собираем все ящики, которым нужно отправить статистику
         boxes_to_process = []
-        for bid, title, channel_id, stat_day, stat_time in boxes:
+        for bid, title, channel_id, stat_day, stat_time, creator_id in boxes:
             if stat_day is not None and stat_day == dow and stat_time == hhmm:
                 boxes_to_process.append((bid, title, channel_id))
         

@@ -8,10 +8,12 @@ import os
 # Добавляем путь к модулям бота
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../bot'))
 
-from app.utils.morphology import (
+from app.utils.alias_morphology import (
     process_alias_morphology_simple,
     decline_adjective_simple,
-    get_noun_gender_simple,
+    get_noun_gender_simple
+)
+from app.utils.word_normalization import (
     normalize_word,
     extract_words_from_text
 )
@@ -113,10 +115,10 @@ class TestMorphologyFixes(unittest.TestCase):
     def test_normalize_word(self):
         """Тест нормализации слов"""
         test_cases = [
-            ("роговообманковый", "роговообманковый"),
-            ("гуттаперчевый", "гуттаперчевый"),
-            ("сургучный", "сургучный"),
-            ("виридиановый", "виридиановый"),
+            ("роговообманковый", "роговообманков"),  # убираем окончание "ый"
+            ("гуттаперчевый", "гуттаперчев"),        # убираем окончание "ый"
+            ("сургучный", "сургучн"),                # убираем окончание "ый"
+            ("виридиановый", "виридианов"),          # убираем окончание "ый"
         ]
         
         for input_word, expected in test_cases:
@@ -130,8 +132,8 @@ class TestMorphologyFixes(unittest.TestCase):
         text = "🐵 роговообманковый обезьяна и 🐱 гуттаперчевый кот"
         result = extract_words_from_text(text)
         
-        # Проверяем, что извлечены основные слова
-        expected_words = {"роговообманковый", "обезьяна", "гуттаперчевый", "кот"}
+        # Проверяем, что извлечены нормализованные слова
+        expected_words = {"роговообманков", "обезьяна", "гуттаперчев", "кот"}
         self.assertTrue(expected_words.issubset(result), 
             f"Expected words {expected_words} not found in result {result}")
     

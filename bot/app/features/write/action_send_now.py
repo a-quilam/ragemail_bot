@@ -38,11 +38,16 @@ async def cb_send_now(c: types.CallbackQuery, state: FSMContext, db, bot, tz: Zo
     is_admin = role in ("admin", "superadmin") or (settings.SUPERADMIN_ID and c.from_user.id == settings.SUPERADMIN_ID)
     
     if is_admin:
-        # Для админов показываем главное меню
+        # Для админов показываем сообщение с ссылкой на пост
+        channel_link = f"https://t.me/{channel_id.replace('@', '')}" if str(channel_id).startswith('@') else f"https://t.me/c/{str(channel_id)[4:]}" if str(channel_id).startswith('-100') else f"https://t.me/{channel_id}"
+        
         await c.message.edit_text(
             "✅ <b>Письмо опубликовано в канал!</b>\n\n"
+            f"📺 <b>Канал:</b> <a href='{channel_link}'>Перейти к посту</a>\n\n"
             "Ваше анонимное сообщение успешно отправлено.",
-            reply_markup=None
+            reply_markup=None,
+            parse_mode="HTML",
+            disable_web_page_preview=True
         )
         
         # Отправляем новое сообщение с главным меню

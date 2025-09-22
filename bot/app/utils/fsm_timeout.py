@@ -88,11 +88,13 @@ async def untrack_fsm_state(user_id: int, state: FSMContext):
     """Прекратить отслеживание FSM состояния пользователя"""
     fsm_timeout_manager.untrack_user_state(user_id)
     
-    # Очищаем состояние
+    # Очищаем состояние, но НЕ очищаем AntispamStates
     current_state = await state.get_state()
-    if current_state:
+    if current_state and not str(current_state).startswith("AntispamStates"):
         await state.clear()
         logger.info(f"User {user_id} exited FSM state: {current_state}")
+    elif current_state and str(current_state).startswith("AntispamStates"):
+        logger.info(f"Preserving AntispamStates {current_state} for user {user_id}")
 
 def start_fsm_timeout_cleanup():
     """Запустить автоматическую очистку FSM состояний"""

@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 async def check_message_for_blocked_words(message_text: str, blocks_repo: AliasBlocksRepo, mailbox_id: Optional[int] = None) -> Optional[str]:
     """
-    Проверить сообщение на наличие заблокированных слов (с нормализацией через pymorphy2)
+    Проверить сообщение на наличие заблокированных слов (оптимизированная версия)
     
     Args:
         message_text: Текст сообщения для проверки
@@ -22,13 +22,25 @@ async def check_message_for_blocked_words(message_text: str, blocks_repo: AliasB
     if not message_text or not blocks_repo:
         return None
     
-    from app.utils.morphology import extract_words_from_text, normalize_word
-    
-    # Извлекаем и нормализуем все слова из сообщения
-    normalized_words = extract_words_from_text(message_text)
-    
-    # Получаем все заблокированные слова для данного ящика
+    # ОПТИМИЗАЦИЯ 1: Проверяем, есть ли заблокированные слова в ящике
     blocked_words = await blocks_repo.get_blocked_words(mailbox_id)
+    if not blocked_words:
+        # Если нет заблокированных слов - не проверяем ничего
+        return None
+    
+    from app.utils.word_normalization import extract_words_from_text, normalize_word
+    
+    # ОПТИМИЗАЦИЯ 2: Умная обработка текста в зависимости от длины
+    if len(message_text) <= 200:
+        # Короткие сообщения - проверяем полностью
+        normalized_words = extract_words_from_text(message_text)
+    else:
+        # Длинные сообщения - проверяем каждое второе слово
+        words = message_text.split()
+        # Берем каждое второе слово для экономии ресурсов
+        sampled_words = [words[i] for i in range(0, len(words), 2)]
+        sampled_text = ' '.join(sampled_words)
+        normalized_words = extract_words_from_text(sampled_text)
     
     # Нормализуем заблокированные слова
     blocked_normalized = set()

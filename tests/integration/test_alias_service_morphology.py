@@ -129,7 +129,7 @@ class TestAliasServiceMorphology(unittest.IsolatedAsyncioTestCase):
                 test_alias = f"🐵 {adjective} {noun}"
                 
                 # Применяем морфологическую обработку
-                from app.utils.morphology import process_alias_morphology_simple
+                from app.utils.alias_morphology import process_alias_morphology_simple
                 result = process_alias_morphology_simple(test_alias)
                 
                 # Проверяем результат

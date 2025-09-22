@@ -1,69 +1,10 @@
 """
-Морфологический анализ слов с использованием pymorphy3
-Оптимизировано для простого Telegram-бота
+Простая морфология для псевдонимов
+Оптимизировано для простого Telegram-бота без внешних зависимостей
 """
 import logging
-import re
-from typing import Set, Optional
-from pymorphy3 import MorphAnalyzer
 
 logger = logging.getLogger(__name__)
-
-# Инициализируем анализатор морфологии
-try:
-    morph = MorphAnalyzer()
-    MORPH_AVAILABLE = True
-except Exception as e:
-    logger.error(f"Failed to initialize MorphAnalyzer: {e}")
-    morph = None
-    MORPH_AVAILABLE = False
-
-def extract_words_from_text(text: str) -> Set[str]:
-    """
-    Извлечь и нормализовать все слова из текста (для системы блокировки)
-    
-    Args:
-        text: Исходный текст
-        
-    Returns:
-        Множество нормализованных слов
-    """
-    if not text or not MORPH_AVAILABLE:
-        return set()
-    
-    # Убираем все кроме букв и пробелов
-    clean_text = re.sub(r'[^\w\s]', ' ', text.lower())
-    words = clean_text.split()
-    
-    normalized_words = set()
-    for word in words:
-        if len(word) > 2:  # Игнорируем короткие слова
-            normalized = normalize_word(word)
-            if normalized:
-                normalized_words.add(normalized)
-    
-    return normalized_words
-
-def normalize_word(word: str) -> Optional[str]:
-    """
-    Нормализовать слово (привести к начальной форме) для системы блокировки
-    
-    Args:
-        word: Исходное слово
-        
-    Returns:
-        Нормализованное слово или None при ошибке
-    """
-    if not word or not MORPH_AVAILABLE:
-        return word
-    
-    # Получаем морфологический анализ
-    parsed = morph.parse(word)
-    if parsed:
-        # Берем первую (наиболее вероятную) интерпретацию
-        normal_form = parsed[0].normal_form
-        return normal_form.lower()
-    return word.lower()
 
 # Простое правило склонения прилагательных для псевдонимов
 ADJECTIVE_DECLENSION = {
@@ -172,21 +113,3 @@ def process_alias_morphology_simple(alias: str) -> str:
         logger.debug(f"Morphology: '{alias}' -> '{result}' (gender: {gender})")
     
     return result
-
-# Функция для тестирования
-def test_morphology():
-    """Тестирование морфологических функций"""
-    test_cases = [
-        "🐵 роговообманковый обезьяна",
-        "🐱 гуттаперчевый кот",
-        "🐶 сургучный пес",
-        "🦊 виридиановый лиса"
-    ]
-    
-    print("Testing morphology processing:")
-    for test_case in test_cases:
-        result = process_alias_morphology_simple(test_case)
-        print(f"  '{test_case}' -> '{result}'")
-
-if __name__ == "__main__":
-    test_morphology()

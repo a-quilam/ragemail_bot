@@ -31,18 +31,7 @@ async def cb_contact(c: types.CallbackQuery, db, bot, tz, active_mailbox_id: int
         alias_service = AliasService(AliasesRepo(db), tz, AliasWordsRepo(db), AliasBlocksRepo(db))
         requester_alias = await alias_service.get_or_issue(c.from_user.id, active_mailbox_id)
         
-        # Отправляем сообщение в чат с ботом
-        await bot.send_message(
-            c.from_user.id,
-            f"💬 <b>Анонимный чат</b>\n\n"
-            f"Вы хотите связаться с автором поста под псевдонимом <b>{author_alias}</b>.\n\n"
-            f"🔒 <b>Ваш псевдоним:</b> {requester_alias}\n\n"
-            f"⏰ Чат будет активен 30 минут.\n\n"
-            f"📝 <b>Напишите ваше сообщение ниже:</b>",
-            parse_mode="HTML"
-        )
-        
-        # Открываем диалог
+        # Открываем диалог (он сам отправит сообщения пользователям)
         ok = await RelayService(bot, RelaysRepo(db)).open_dialog(author_id, c.from_user.id, author_alias, requester_alias)
         
         if not ok:

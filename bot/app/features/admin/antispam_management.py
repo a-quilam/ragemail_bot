@@ -176,11 +176,11 @@ async def show_antispam_menu(m: types.Message, state: FSMContext, db, mailbox_id
             text += f"... и еще {len(cooldowns) - 3} кулдаунов\n"
     
     text += "\n💡 <b>Команды блокировки слов:</b>\n"
-    text += "• <code>/block слово</code> - заблокировать слово\n"
+    text += "• <code>/block слово [причина] [время_в_часах]</code> - заблокировать слово\n"
     text += "• <code>/unblock слово</code> - разблокировать слово\n"
     text += "• <code>/blocks</code> - показать все блокировки\n\n"
     text += "💡 <b>Команды кулдаунов:</b>\n"
-    text += "• <code>/cooldown псевдоним [часы] [причина]</code> - кулдаун по псевдониму\n"
+    text += "• <code>/cooldown псевдоним [время_в_часах] [причина]</code> - кулдаун по псевдониму\n"
     text += "• <code>/remove_cooldown user_id</code> - снять кулдаун\n"
     text += "• <code>/cooldowns</code> - показать все кулдауны"
     
@@ -215,7 +215,7 @@ async def cmd_block_word(m: types.Message, state: FSMContext, db, active_mailbox
         return
     
     # Парсим команду: /block слово [причина] [время_в_часах]
-    parts = m.text.split(maxsplit=3)
+    parts = m.text.split()
     if len(parts) < 2:
         await m.answer(
             "🚫 <b>Блокировка слова</b>\n\n"
@@ -229,14 +229,22 @@ async def cmd_block_word(m: types.Message, state: FSMContext, db, active_mailbox
         return
     
     word = parts[1].lower()
-    reason = parts[2] if len(parts) > 2 else ""
+    reason = ""
     duration_hours = 24  # По умолчанию 24 часа
     
-    if len(parts) > 3:
+    # Обрабатываем оставшиеся аргументы
+    remaining_parts = parts[2:] if len(parts) > 2 else []
+    
+    if remaining_parts:
+        # Проверяем, является ли последний аргумент числом (время в часах)
+        last_part = remaining_parts[-1]
         try:
-            duration_hours = int(parts[3])
+            duration_hours = int(last_part)
+            # Если последний аргумент - число, то причина - это все остальное
+            reason = " ".join(remaining_parts[:-1]) if len(remaining_parts) > 1 else ""
         except ValueError:
-            duration_hours = 24
+            # Если последний аргумент не число, то вся строка - причина
+            reason = " ".join(remaining_parts)
     
     blocks_repo = AliasBlocksRepo(db)
     success = await blocks_repo.block_user_by_alias_word(word, m.from_user.id, mailbox_id, reason, duration_hours)
@@ -316,7 +324,7 @@ async def cmd_cooldown_user(m: types.Message, state: FSMContext, db, active_mail
         return
     
     # Парсим команду: /cooldown псевдоним [время_в_часах] [причина]
-    parts = m.text.split(maxsplit=3)
+    parts = m.text.split()
     if len(parts) < 2:
         await m.answer(
             "⏰ <b>Установка кулдауна по псевдониму</b>\n\n"
@@ -330,18 +338,28 @@ async def cmd_cooldown_user(m: types.Message, state: FSMContext, db, active_mail
         )
         return
     
-    alias = parts[1]
+    # Псевдоним может состоять из нескольких слов, поэтому нужно найти где начинается время/причина
+    remaining_parts = parts[1:]  # Все части кроме команды
     duration_hours = 24  # По умолчанию 24 часа
     reason = ""
     
-    if len(parts) >= 3:
+    # Ищем первое число в оставшихся частях - это время в часах
+    time_index = -1
+    for i, part in enumerate(remaining_parts):
         try:
-            duration_hours = int(parts[2])
+            duration_hours = int(part)
+            time_index = i
+            break
         except ValueError:
-            reason = parts[2]
+            continue
     
-    if len(parts) >= 4:
-        reason = parts[3]
+    if time_index >= 0:
+        # Нашли время, псевдоним - все до времени, причина - все после времени
+        alias = " ".join(remaining_parts[:time_index])
+        reason = " ".join(remaining_parts[time_index + 1:]) if time_index + 1 < len(remaining_parts) else ""
+    else:
+        # Время не найдено, значит вся строка - псевдоним
+        alias = " ".join(remaining_parts)
     
     cooldowns_repo = UserCooldownsRepo(db)
     success = await cooldowns_repo.set_cooldown_by_alias(alias, mailbox_id, duration_hours, reason)

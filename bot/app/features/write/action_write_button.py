@@ -10,11 +10,9 @@ async def on_write_button(m: types.Message, state: FSMContext, active_mailbox_id
     from app.features.admin.cmd_postpin import clear_postpin_wait
     clear_postpin_wait(m.from_user.id)
     
-    # Валидация kwargs для предотвращения неожиданных параметров
-    if kwargs:
-        logging.warning(f"Unexpected kwargs in on_write_button: {list(kwargs.keys())}")
-        # Очищаем kwargs для безопасности
-        kwargs.clear()
+    # Игнорируем неожиданные параметры от middleware без логирования
+    # Это нормальное поведение - middleware передает дополнительные параметры
+    # которые не используются в данном обработчике
     
     logging.info(f"WRITE BUTTON CLICKED by user {m.from_user.id}, active_mailbox_id: {active_mailbox_id}, text: '{m.text}'")
     logging.info(f"WRITE BUTTON: Current FSM state: {await state.get_state()}")
@@ -43,8 +41,19 @@ async def on_write_button(m: types.Message, state: FSMContext, active_mailbox_id
             return
         
         logging.info(f"Setting state to INPUT_TEXT for user {m.from_user.id}")
-        await state.clear()
-        await state.set_state(WriteStates.INPUT_TEXT)
+        # Очищаем состояние, но сохраняем данные AntispamStates если они есть
+        current_state = await state.get_state()
+        if current_state and str(current_state).startswith("AntispamStates"):
+            # Сохраняем данные антиспама перед очисткой
+            antispam_data = await state.get_data()
+            await state.clear()
+            await state.set_state(WriteStates.INPUT_TEXT)
+            # Восстанавливаем данные антиспама
+            await state.update_data(antispam_data)
+            logging.info(f"Preserved AntispamStates data when switching to WriteStates for user {m.from_user.id}")
+        else:
+            await state.clear()
+            await state.set_state(WriteStates.INPUT_TEXT)
         # Remove keyboard
         await m.answer(PROMPT_INPUT, reply_markup=types.ReplyKeyboardRemove())
         logging.info(f"Write button response sent to user {m.from_user.id}")

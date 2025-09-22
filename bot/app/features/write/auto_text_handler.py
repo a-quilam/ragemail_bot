@@ -3,8 +3,10 @@ from aiogram.fsm.context import FSMContext
 from app.fsm.write_states import WriteStates
 from app.texts.prompts import PROMPT_INPUT
 from app.infra.repo.users_repo import UsersRepo
+from app.infra.repo.relays_repo import RelaysRepo
 from app.core.config import settings
 import logging
+import time
 
 async def on_auto_text_input(m: types.Message, state: FSMContext, db, active_mailbox_id: int, tz):
     """Автоматически переводит обычных пользователей в состояние INPUT_TEXT для обработки письма"""
@@ -21,7 +23,8 @@ async def on_auto_text_input(m: types.Message, state: FSMContext, db, active_mai
         current_state = await state.get_state()
         
         # Если админ застрял в FSM состоянии (не в WriteStates), очищаем его
-        if current_state and not str(current_state).startswith("WriteStates"):
+        # НО НЕ очищаем AntispamStates - это может нарушить работу антиспама
+        if current_state and not str(current_state).startswith("WriteStates") and not str(current_state).startswith("AntispamStates"):
             logging.info(f"AUTO TEXT HANDLER: Clearing stuck FSM state for admin {m.from_user.id}: {current_state}")
             await state.clear()
             await m.answer("🔄 Состояние сброшено. Вы можете продолжить работу.")
@@ -41,6 +44,11 @@ async def on_auto_text_input(m: types.Message, state: FSMContext, db, active_mai
     
     # Проверяем, что это не команда
     if m.text and m.text.startswith('/'):
+        return False
+    
+    # ИСКЛЮЧАЕМ реплаи - они должны обрабатываться relay_router
+    if m.reply_to_message:
+        logging.info(f"AUTO TEXT HANDLER: Skipping reply message from user {m.from_user.id}")
         return False
     
     # Проверяем, что это не кнопка

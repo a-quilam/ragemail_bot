@@ -127,7 +127,7 @@ class AliasService:
                 # Применяем упрощенную морфологическую обработку
                 original_alias = alias
                 try:
-                    from app.utils.morphology import process_alias_morphology_simple
+                    from app.utils.alias_morphology import process_alias_morphology_simple
                     alias = process_alias_morphology_simple(alias)
                     if alias != original_alias:
                         logger.info(f"Morphology applied: '{original_alias}' -> '{alias}'")
@@ -184,7 +184,7 @@ class AliasService:
                     # Применяем упрощенную морфологическую обработку
                     original_alias = alias
                     try:
-                        from app.utils.morphology import process_alias_morphology_simple
+                        from app.utils.alias_morphology import process_alias_morphology_simple
                         alias = process_alias_morphology_simple(alias)
                         if alias != original_alias:
                             logger.info(f"Backup morphology applied: '{original_alias}' -> '{alias}'")

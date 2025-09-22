@@ -24,14 +24,28 @@ async def cb_send_delay(c: types.CallbackQuery, state: FSMContext, db, tz: ZoneI
     await db.commit()
     item_id = cur.lastrowid
     await c.message.edit_text("✅ Хорошо, отправлю через 2 минуты")
-    await c.message.answer("Вы можете отменить отложенную отправку:", reply_markup=delayed_cancel_kb(item_id))
+    cancel_message = await c.message.answer("Вы можете отменить отложенную отправку:", reply_markup=delayed_cancel_kb(item_id))
+    
+    # Сохраняем message_id сообщения с кнопкой отмены
+    await db.execute("UPDATE delayed_queue SET cancel_message_id = ? WHERE id = ?", (cancel_message.message_id, item_id))
+    await db.commit()
+    
     await c.answer()
 
 async def cb_cancel_delay(c: types.CallbackQuery, db):
     if not c.data.startswith("cancel_delay:"):
         return
     item_id = int(c.data.split(":")[1])
+    
+    # Получаем информацию о сообщении перед удалением
+    row = await db.fetchone("SELECT cancel_message_id FROM delayed_queue WHERE id=?", (item_id,))
+    
     await db.execute("DELETE FROM delayed_queue WHERE id=?", (item_id,))
     await db.commit()
-    await c.message.edit_text("Отложенная отправка отменена и черновик удалён.")
+    
+    # Удаляем сообщение с кнопкой отмены
+    await c.message.delete()
+    
+    # Отправляем подтверждение об отмене
+    await c.message.answer("✅ Отложенная отправка отменена и черновик удалён.")
     await c.answer()

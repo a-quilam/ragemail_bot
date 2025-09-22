@@ -39,7 +39,7 @@
 ```python
 # Применяем морфологическую обработку для правильного склонения
 try:
-    from app.utils.morphology import process_alias_morphology
+    from app.utils.alias_morphology import process_alias_morphology_simple
     alias = process_alias_morphology(alias)
 except Exception as e:
     logger.warning(f"Failed to process alias morphology: {e}")
