@@ -109,8 +109,14 @@ class AliasService:
         # Генерируем пул псевдонимов
         self._alias_pool = []
         used_aliases = set()
+        used_adjectives = set()  # Отслеживаем использованные прилагательные
         
-        for _ in range(self._pool_size):
+        attempts = 0
+        max_attempts = self._pool_size * 3  # Максимум попыток для генерации пула
+        
+        while len(self._alias_pool) < self._pool_size and attempts < max_attempts:
+            attempts += 1
+            
             # Быстрая генерация без проверки уникальности в БД
             available_emojis = [e for e in ANIMAL_EMOJIS if e not in cache['emojis']]
             if not available_emojis:
@@ -118,9 +124,18 @@ class AliasService:
             
             emoji = random.choice(available_emojis)
             
-            if random.random() < 0.5:
+            # Определяем формат псевдонима
+            use_adjective_format = random.random() < 0.5
+            
+            if use_adjective_format:
                 # Формат: эмодзи + прилагательное + существительное
-                adjective = random.choice(cache['adjectives'] or ADJECTIVES)
+                # Проверяем, что прилагательное еще не использовалось
+                available_adjectives = [adj for adj in (cache['adjectives'] or ADJECTIVES) if adj not in used_adjectives]
+                if not available_adjectives:
+                    # Если все прилагательные использованы, используем любые
+                    available_adjectives = cache['adjectives'] or ADJECTIVES
+                
+                adjective = random.choice(available_adjectives)
                 noun = random.choice(cache['nouns'] or NOUNS_2SYL)
                 alias = f"{emoji} {adjective} {noun}"
                 
@@ -136,6 +151,9 @@ class AliasService:
                 except Exception as e:
                     logger.warning(f"Failed to process alias morphology: {e}")
                     # Продолжаем с исходным псевдонимом
+                
+                # Добавляем исходное прилагательное в использованные (до морфологии)
+                used_adjectives.add(adjective)
             else:
                 # Формат: эмодзи + существительное + цифры
                 noun = random.choice(cache['nouns'] or NOUNS_2SYL)

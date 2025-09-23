@@ -48,16 +48,19 @@ async def on_text_input(m: types.Message, state: FSMContext, db, tz: ZoneInfo, a
         return
     
     # Проверяем блокировки слов в сообщении
-    from app.utils.message_blocking import check_message_for_blocked_words, get_blocked_message_response
+    from app.utils.message_blocking import check_message_for_blocked_words, get_blocked_message_response, get_blocked_message_keyboard
     
     blocks_repo = AliasBlocksRepo(db)
-    blocked_word = await check_message_for_blocked_words(text, blocks_repo, active_mailbox_id)
+    blocked_info = await check_message_for_blocked_words(text, blocks_repo, active_mailbox_id)
     
-    if blocked_word:
+    if blocked_info:
+        # Отправляем сообщение о блокировке с кнопкой
         await m.answer(
-            get_blocked_message_response(blocked_word, text, active_mailbox_id),
-            parse_mode="HTML"
+            get_blocked_message_response(blocked_info, text, active_mailbox_id),
+            parse_mode="HTML",
+            reply_markup=get_blocked_message_keyboard()
         )
+        
         await state.clear()
         return
     

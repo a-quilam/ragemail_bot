@@ -10,7 +10,6 @@ class Settings(BaseModel):
     DEFAULT_TTL_SECONDS: int = 900
     DB_PATH: str = "queue.db"
     LOG_LEVEL: str = "INFO"
-    KNOWN_CHANNELS: Optional[list] = None
     
     # Network settings
     NETWORK_CONNECT_TIMEOUT: float = 10.0
@@ -46,14 +45,6 @@ def load_settings() -> Settings:
     if not token:
         raise RuntimeError("BOT_TOKEN не задан в .env")
     
-    # Парсим известные каналы из переменной окружения
-    known_channels = None
-    channels_str = os.getenv("KNOWN_CHANNELS")
-    if channels_str:
-        try:
-            known_channels = [int(ch.strip()) for ch in channels_str.split(",") if ch.strip()]
-        except ValueError:
-            known_channels = None
     
     return Settings(
         BOT_TOKEN=token,
@@ -62,7 +53,6 @@ def load_settings() -> Settings:
         DEFAULT_TTL_SECONDS=int(os.getenv("DEFAULT_TTL_SECONDS", "900")),
         DB_PATH=os.getenv("DB_PATH", "queue.db"),
         LOG_LEVEL=os.getenv("LOG_LEVEL", "INFO"),
-        KNOWN_CHANNELS=known_channels,
         # Network settings
         NETWORK_CONNECT_TIMEOUT=_to_float("NETWORK_CONNECT_TIMEOUT", 10.0),
         NETWORK_READ_TIMEOUT=_to_float("NETWORK_READ_TIMEOUT", 30.0),

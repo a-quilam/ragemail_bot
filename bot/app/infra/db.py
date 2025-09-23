@@ -110,6 +110,14 @@ async def apply_migrations(db: aiosqlite.Connection) -> None:
         # Таблица уже существует
         pass
     
+    # Миграция: добавляем поле cancel_message_id в delayed_queue если его нет
+    try:
+        await db.execute("ALTER TABLE delayed_queue ADD COLUMN cancel_message_id INTEGER")
+        await db.commit()
+    except Exception:
+        # Колонка уже существует
+        pass
+    
     # Таблицы для системы антиспама создаются в миграции 001
     
     await db.commit()

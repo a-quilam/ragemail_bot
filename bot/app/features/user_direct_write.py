@@ -46,16 +46,19 @@ async def handle_user_message(m: types.Message, state: FSMContext, db, active_ma
     
     # Проверяем блокировки слов в сообщении
     from app.infra.repo.alias_blocks_repo import AliasBlocksRepo
-    from app.utils.message_blocking import check_message_for_blocked_words, get_blocked_message_response
+    from app.utils.message_blocking import check_message_for_blocked_words, get_blocked_message_response, get_blocked_message_keyboard
     
     blocks_repo = AliasBlocksRepo(db)
-    blocked_word = await check_message_for_blocked_words(m.text, blocks_repo, active_mailbox_id)
+    blocked_info = await check_message_for_blocked_words(m.text, blocks_repo, active_mailbox_id)
     
-    if blocked_word:
+    if blocked_info:
+        # Отправляем сообщение о блокировке с кнопкой
         await m.answer(
-            get_blocked_message_response(blocked_word, m.text, active_mailbox_id),
-            parse_mode="HTML"
+            get_blocked_message_response(blocked_info, m.text, active_mailbox_id),
+            parse_mode="HTML",
+            reply_markup=get_blocked_message_keyboard()
         )
+        
         return True
     
     # Проверяем, что у пользователя есть активный ящик

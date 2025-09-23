@@ -102,23 +102,6 @@ class ChannelTracker:
         except Exception as e:
             logging.error(f"Error getting admin channels: {e}")
         
-        # Также проверяем каналы из конфига
-        from app.core.config import settings
-        if hasattr(settings, 'KNOWN_CHANNELS') and settings.KNOWN_CHANNELS:
-            for channel_id in settings.KNOWN_CHANNELS:
-                try:
-                    if await bot_is_admin(bot, channel_id):
-                        chat = await bot.get_chat(channel_id)
-                        # Проверяем, что канал еще не добавлен
-                        if not any(ch["id"] == channel_id for ch in admin_channels):
-                            admin_channels.append({
-                                "id": channel_id,
-                                "title": chat.title or f"Канал {channel_id}",
-                                "existing": False
-                            })
-                            logging.info(f"Found config admin channel: {channel_id} ({chat.title})")
-                except Exception as e:
-                    logging.debug(f"Could not check config channel {channel_id}: {e}")
         
         logging.info(f"Total admin channels found: {len(admin_channels)}")
         return admin_channels
