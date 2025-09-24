@@ -3,7 +3,7 @@
 > **Простой и безопасный способ общаться анонимно через Telegram каналы**
 
 [![Python](https://img.shields.io/badge/Python-3.13+-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![Version](https://img.shields.io/badge/Version-1.0.0-orange.svg?style=for-the-badge&logo=rocket&logoColor=white)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.0.2-orange.svg?style=for-the-badge&logo=rocket&logoColor=white)](CHANGELOG.md)
 [![Status](https://img.shields.io/badge/Status-Stable-brightgreen.svg?style=for-the-badge&logo=check-circle&logoColor=white)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge&logo=opensourceinitiative&logoColor=white)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/a-quilam/ragemail_bot.svg?style=for-the-badge&logo=github&logoColor=white)](https://github.com/a-quilam/ragemail_bot)
@@ -459,7 +459,7 @@ bot/
 
 ## ⚠️ Важные замечания
 
-> **ВНИМАНИЕ: Это стабильная версия (v1.0.0). Бот готов к использованию.**
+> **ВНИМАНИЕ: Это стабильная версия (v1.0.2). Бот готов к использованию.**
 
 > 🚨 **КРИТИЧЕСКОЕ ПРЕДУПРЕЖДЕНИЕ: Этот бот полностью написан вайб-кодом!** 
 > 
