@@ -5,7 +5,7 @@ from app.infra.repo.users_repo import UsersRepo
 from app.infra.repo.mailboxes_repo import MailboxesRepo
 from app.infra.tg_api import user_is_member
 from app.core.config import settings
-from app.keyboards.write_flow import start_kb_admin, start_kb_user
+from app.keyboards.write_flow import start_kb_admin, start_kb
 
 async def cmd_start_payload(m: types.Message, db, bot):
     """Обработка deeplink с оптимизированными запросами к БД"""
@@ -92,7 +92,7 @@ async def cmd_start_payload(m: types.Message, db, bot):
                 "✅ <b>Привязка выполнена!</b>\n\n"
                 "Теперь вы пишете в этот ящик по умолчанию.\n\n"
                 "Просто напишите ваше анонимное сообщение, и я отправлю его в канал.",
-                reply_markup=start_kb_user()
+                reply_markup=start_kb()
             )
         
         return True

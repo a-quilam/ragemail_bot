@@ -8,15 +8,6 @@ def start_kb() -> ReplyKeyboardMarkup:
         input_field_placeholder="Напишите ваше анонимное сообщение...",
     )
 
-def start_kb_user() -> ReplyKeyboardMarkup:
-    return ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="✍️ Написать")]
-        ],
-        resize_keyboard=True,
-        selective=True,
-        input_field_placeholder="Напишите ваше анонимное сообщение...",
-    )
 
 def start_kb_admin() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(

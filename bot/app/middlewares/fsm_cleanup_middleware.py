@@ -43,19 +43,24 @@ class FSMCleanupMiddleware(BaseMiddleware):
             except Exception as cleanup_error:
                 logger.error(f"Failed to clear FSM state: {cleanup_error}")
             
-            # Отправляем сообщение об ошибке пользователю
+            # Отправляем сообщение об ошибке пользователю только если это не ошибка с bot=None
+            # (в этом случае обработчик уже отправил свое сообщение)
             try:
-                if isinstance(event, Message):
-                    await event.answer(
-                        "❌ <b>Произошла ошибка</b>\n\n"
-                        "Попробуйте еще раз или обратитесь к администратору.",
-                        parse_mode="HTML"
-                    )
-                elif isinstance(event, CallbackQuery):
-                    await event.answer(
-                        "❌ Произошла ошибка. Попробуйте еще раз.",
-                        show_alert=True
-                    )
+                # Проверяем, не связана ли ошибка с отсутствующим bot объектом
+                if "NoneType" in str(e) and "send_message" in str(e):
+                    logger.info("Skipping error message - handler already sent its own error message")
+                else:
+                    if isinstance(event, Message):
+                        await event.answer(
+                            "❌ <b>Произошла ошибка</b>\n\n"
+                            "Попробуйте еще раз или обратитесь к администратору.",
+                            parse_mode="HTML"
+                        )
+                    elif isinstance(event, CallbackQuery):
+                        await event.answer(
+                            "❌ Произошла ошибка. Попробуйте еще раз.",
+                            show_alert=True
+                        )
             except Exception as message_error:
                 logger.error(f"Failed to send error message: {message_error}")
             

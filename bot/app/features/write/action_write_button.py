@@ -18,6 +18,30 @@ async def on_write_button(m: types.Message, state: FSMContext, active_mailbox_id
     logging.info(f"WRITE BUTTON: Current FSM state: {await state.get_state()}")
     
     if m.text == "✍️ Написать письмо":
+        # ПРОВЕРЯЕМ ПРАВА ДОСТУПА - кнопка только для админов
+        from app.infra.repo.users_repo import UsersRepo
+        from app.core.config import settings
+        
+        # Получаем роль пользователя из middleware или проверяем вручную
+        db = kwargs.get('db')
+        if not db:
+            logging.error(f"No database connection available for user {m.from_user.id}")
+            await m.answer("❌ Ошибка доступа к базе данных. Попробуйте позже.")
+            return
+        
+        users_repo = UsersRepo(db)
+        role = await users_repo.get_role(m.from_user.id)
+        is_admin = role in ("admin", "superadmin") or (settings.SUPERADMIN_ID and m.from_user.id == settings.SUPERADMIN_ID)
+        
+        if not is_admin:
+            logging.warning(f"Non-admin user {m.from_user.id} tried to access write button")
+            await m.answer(
+                "❌ <b>Доступ ограничен</b>\n\n"
+                "Эта функция доступна только администраторам.\n\n"
+                "Для отправки анонимных сообщений просто напишите текст напрямую.",
+                parse_mode="HTML"
+            )
+            return
         logging.info(f"WRITE BUTTON: Processing write button for user {m.from_user.id}, active_mailbox_id: {active_mailbox_id}")
         # Проверяем, не в процессе ли уже написания письма
         try:

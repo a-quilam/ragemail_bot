@@ -19,10 +19,16 @@ DEFAULT_TTL = DEFAULT_TTL_SECONDS
 async def on_text_input(m: types.Message, state: FSMContext, db, tz: ZoneInfo, active_mailbox_id: Optional[int] = None, **kwargs):
     bot = kwargs.get('bot')
     
+    # Проверяем, что bot передан корректно
+    if bot is None:
+        logging.error(f"TEXT INPUT: bot is None for user {m.from_user.id}")
+        await m.answer("❌ Ошибка: объект бота не найден. Попробуйте еще раз.")
+        return
+    
     text = (m.text or "").strip()
     if not text:
         logging.info(f"TEXT INPUT: Empty text from user {m.from_user.id}")
-        await bot.send_message(m.chat.id, "Пустой текст. Напишите письмо текстом.")
+        await m.answer("Пустой текст. Напишите письмо текстом.")
         return
     
     # Проверяем кулдаун пользователя

@@ -52,7 +52,7 @@ async def on_auto_text_input(m: types.Message, state: FSMContext, db, active_mai
         return False
     
     # Проверяем, что это не кнопка
-    button_texts = ["✍️ Написать письмо", "⚙️ Настройки", "📊 Статистика", "📌 Закрепить пост", "🔄 Обновить", "🛡️ Антиспам", "👤 Добавить админа", "🗑️ Удалить админа", "➕ Создать почтовый ящик", "📦 Управление ящиками", "🔙 Назад", "✅ Хорошо, не буду нарушать"]
+    button_texts = ["✍️ Написать", "✍️ Написать письмо", "⚙️ Настройки", "📊 Статистика", "📌 Закрепить пост", "🔄 Обновить", "🛡️ Антиспам", "👤 Добавить админа", "🗑️ Удалить админа", "➕ Создать почтовый ящик", "📦 Управление ящиками", "🔙 Назад", "✅ Хорошо, не буду нарушать"]
     if m.text in button_texts:
         logging.info(f"AUTO TEXT HANDLER: Skipping button text: {m.text}")
         return False
@@ -77,6 +77,12 @@ async def on_auto_text_input(m: types.Message, state: FSMContext, db, active_mai
     
     # Теперь вызываем обработчик INPUT_TEXT для полной обработки
     from .state_input_text import on_text_input
-    await on_text_input(m, state, db, tz, active_mailbox_id)
+    # Проверяем, что bot доступен
+    if m.bot is None:
+        logging.error(f"AUTO TEXT HANDLER: bot is None for user {m.from_user.id}")
+        await m.answer("❌ Ошибка: объект бота не найден. Попробуйте еще раз.")
+        return True
+    
+    await on_text_input(m, state, db, tz, active_mailbox_id, bot=m.bot)
     
     return True
