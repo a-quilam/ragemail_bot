@@ -16,12 +16,13 @@ from app.core.constants import MAX_TEXT_LENGTH, DEFAULT_TTL_SECONDS
 
 DEFAULT_TTL = DEFAULT_TTL_SECONDS
 
-async def on_text_input(m: types.Message, state: FSMContext, db, tz: ZoneInfo, active_mailbox_id: Optional[int] = None):
+async def on_text_input(m: types.Message, state: FSMContext, db, tz: ZoneInfo, active_mailbox_id: Optional[int] = None, **kwargs):
+    bot = kwargs.get('bot')
     
     text = (m.text or "").strip()
     if not text:
         logging.info(f"TEXT INPUT: Empty text from user {m.from_user.id}")
-        await m.answer("Пустой текст. Напишите письмо текстом.")
+        await bot.send_message(m.chat.id, "Пустой текст. Напишите письмо текстом.")
         return
     
     # Проверяем кулдаун пользователя
@@ -37,7 +38,8 @@ async def on_text_input(m: types.Message, state: FSMContext, db, tz: ZoneInfo, a
         
         reason_text = f"\n📝 <b>Причина:</b> {cooldown_info['reason']}" if cooldown_info['reason'] else ""
         
-        await m.answer(
+        await bot.send_message(
+            m.chat.id,
             f"⏰ <b>Вы на кулдауне</b>\n\n"
             f"🚫 <b>Псевдоним:</b> {cooldown_info['alias']}\n"
             f"⏱️ <b>Осталось:</b> {hours_left}ч {minutes_left}м{reason_text}\n\n"
@@ -55,7 +57,8 @@ async def on_text_input(m: types.Message, state: FSMContext, db, tz: ZoneInfo, a
     
     if blocked_info:
         # Отправляем сообщение о блокировке с кнопкой
-        await m.answer(
+        await bot.send_message(
+            m.chat.id,
             get_blocked_message_response(blocked_info, text, active_mailbox_id),
             parse_mode="HTML",
             reply_markup=get_blocked_message_keyboard()
@@ -66,7 +69,8 @@ async def on_text_input(m: types.Message, state: FSMContext, db, tz: ZoneInfo, a
     
     # Валидация длины текста
     if len(text) > MAX_TEXT_LENGTH:
-        await m.answer(
+        await bot.send_message(
+            m.chat.id,
             f"❌ <b>Слишком длинное сообщение</b>\n\n"
             f"Максимальная длина: {MAX_TEXT_LENGTH} символов\n"
             f"Ваше сообщение: {len(text)} символов\n\n"
@@ -96,5 +100,5 @@ async def on_text_input(m: types.Message, state: FSMContext, db, tz: ZoneInfo, a
         current_ttl=DEFAULT_TTL
     )
     preview = build_ttl_preview(alias, text=text, delete_at=delete_at, tz=tz)
-    await m.answer(preview, reply_markup=ttl_selection_kb(DEFAULT_TTL, 48*60*60, tz))
+    await bot.send_message(m.chat.id, preview, reply_markup=ttl_selection_kb(DEFAULT_TTL, 48*60*60, tz))
     logging.info(f"TEXT INPUT: Successfully processed text from user {m.from_user.id}, alias: {alias}")
