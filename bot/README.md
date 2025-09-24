@@ -1,4 +1,4 @@
-# Злое письмо — Telegram-бот (aiogram v3).
+# Злое письмо — Telegram-бот (aiogram v3)
 
 ## Быстрый старт
 1) Создай .env на основе .env.example
