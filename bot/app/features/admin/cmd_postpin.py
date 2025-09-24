@@ -72,6 +72,11 @@ async def on_postpin_text(m: types.Message, db):
             await m.bot.pin_chat_message(channel_id, msg.message_id)
         except TelegramAPIError:
             pass  # Игнорируем ошибки закрепления
+        else:
+            try:
+                await m.bot.delete_message(channel_id, msg.message_id + 1)
+            except TelegramAPIError:
+                pass  # Игнорируем ошибки удаления сервисного сообщения
         await m.answer("Готово: пост отправлен и закреплён.")
     except TelegramAPIError as e:
         await m.answer(f"❌ Ошибка при отправке поста: {e}")

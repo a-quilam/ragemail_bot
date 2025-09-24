@@ -28,10 +28,21 @@ class RelaysRepo:
 
     async def get_by_message_id(self, user_id: int, message_id: int, now_ts: int) -> Optional[Tuple[int,int,int,str,str,int,int,int]]:
         """Получить активный релей по ID сообщения пользователя"""
-        return await (await self.db.execute(
+        import logging
+        
+        logging.info(f"RELAYS REPO: get_by_message_id called for user {user_id}, message_id {message_id}, now_ts {now_ts}")
+        
+        result = await (await self.db.execute(
             "SELECT id,a_user_id,b_user_id,a_alias,b_alias,expires_at,a_message_id,b_message_id FROM relays WHERE ((a_user_id=? AND a_message_id=?) OR (b_user_id=? AND b_message_id=?)) AND expires_at> ? ORDER BY id DESC LIMIT 1",
             (user_id, message_id, user_id, message_id, now_ts),
         )).fetchone()
+        
+        if result:
+            logging.info(f"RELAYS REPO: Found relay: {result}")
+        else:
+            logging.info(f"RELAYS REPO: No relay found for user {user_id} and message_id {message_id}")
+            
+        return result
 
     async def purge_expired(self, now_ts: int) -> None:
         await self.db.execute("DELETE FROM relays WHERE expires_at<=?", (now_ts,))

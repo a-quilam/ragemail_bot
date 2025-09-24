@@ -14,7 +14,12 @@ async def cmd_start_payload(m: types.Message, db, bot):
         # Фильтр уже проверил, что есть параметры
         logging.info(f"START with payload processing: '{m.text}'")
         
-        payload = m.text.split()[1]
+        parts = m.text.split()
+        if len(parts) < 2:
+            logging.info("START payload handler called without parameters, skipping")
+            return False
+
+        payload = parts[1]
         if not payload.isdigit():
             await m.answer("❌ Неверный формат ссылки.")
             return True

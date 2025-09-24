@@ -101,8 +101,8 @@ async def main() -> None:
     dp.include_router(admin_router)   # Админские функции - ПЕРВЫЙ!
     dp.include_router(bind_router)   # Обработка start payload - ДОЛЖЕН БЫТЬ ПЕРЕД start_router!
     dp.include_router(start_router)  # /start команда без параметров
-    dp.include_router(write_router)   # Написание писем - ДОЛЖЕН БЫТЬ ПЕРЕД relay_router!
-    dp.include_router(relay_router)  # /end команда и релеи
+    dp.include_router(relay_router)  # /end команда и релеи - ДОЛЖЕН БЫТЬ ПЕРЕД write_router!
+    dp.include_router(write_router)   # Написание писем
     dp.include_router(channel_router) # Callback кнопки каналов
     dp.include_router(auto_detect_router)  # Автоматическое обнаружение каналов
     dp.include_router(debug_router)   # Отладочный роутер - последний

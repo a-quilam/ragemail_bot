@@ -23,6 +23,7 @@ class TestDeeplinkFlow(unittest.IsolatedAsyncioTestCase):
         """Настройка тестового окружения"""
         self.db = AsyncMock()
         self.bot = AsyncMock()
+        self.bot.delete_message = AsyncMock()
         
         # Мокаем репозитории
         self.users_repo = AsyncMock(spec=UsersRepo)
@@ -60,7 +61,9 @@ class TestDeeplinkFlow(unittest.IsolatedAsyncioTestCase):
         mock_me = MagicMock()
         mock_me.username = "testbot"
         self.bot.get_me.return_value = mock_me
-        self.bot.send_message = AsyncMock()
+        sent_message = MagicMock()
+        sent_message.message_id = 100
+        self.bot.send_message = AsyncMock(return_value=sent_message)
         self.bot.pin_chat_message = AsyncMock()
         
         # Тестируем создание deeplink поста
@@ -98,6 +101,7 @@ class TestDeeplinkFlow(unittest.IsolatedAsyncioTestCase):
         
         # Проверяем, что пост был закреплен
         self.bot.pin_chat_message.assert_called_once()
+        self.bot.delete_message.assert_called_once_with(-1001234567890, sent_message.message_id + 1)
 
     @patch('app.features.bind.start_payload.UsersRepo')
     @patch('app.features.bind.start_payload.MailboxesRepo')
