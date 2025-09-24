@@ -5,5 +5,8 @@ from app.infra.repo.relays_repo import RelaysRepo
 
 async def cmd_end(m: types.Message, db, bot):
     if m.chat.type == ChatType.PRIVATE:
-        await RelayService(bot, RelaysRepo(db)).end_for(m.from_user.id)
-        await m.answer("🔒 Диалог завершен.")
+        peer_alias = await RelayService(bot, RelaysRepo(db)).end_for(m.from_user.id)
+        if peer_alias:
+            await m.answer(f"🔒 Диалог с «{peer_alias}» завершен.")
+        else:
+            await m.answer("🔒 Активных анонимных диалогов не найдено.")
